@@ -1,4 +1,4 @@
-package i5.las2peer.services.toDoList-Microservice.database;
+package i5.las2peer.services.todolist.database;
 
 import java.sql.Connection;
 import java.sql.SQLException;

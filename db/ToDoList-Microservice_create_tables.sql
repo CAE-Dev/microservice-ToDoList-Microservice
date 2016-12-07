@@ -8,7 +8,7 @@
 --
 CREATE TABLE gamificationCAE.todolist (
   name TEXT,
-  idx INTEGER,
-  CONSTRAINT idx_PK PRIMARY KEY (idx)
+  id INT NOT NULL AUTO_INCREMENT,
+  CONSTRAINT id_PK PRIMARY KEY (id)
 );
 

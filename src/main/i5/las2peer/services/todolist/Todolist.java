@@ -1,6 +1,11 @@
-package i5.las2peer.services.toDoList-Microservice;
+package i5.las2peer.services.todolist;
 
 import java.net.HttpURLConnection;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -12,14 +17,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.Consumes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-
 import i5.las2peer.api.Service;
 import i5.las2peer.restMapper.HttpResponse;
 import i5.las2peer.restMapper.MediaType;
 import i5.las2peer.restMapper.RESTMapper;
 import i5.las2peer.restMapper.annotations.ContentParam;
 import i5.las2peer.restMapper.annotations.Version;
-import i5.las2peer.services.toDoList-Microservice.database.DatabaseManager;
+import i5.las2peer.services.todolist.database.DatabaseManager;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -31,6 +35,8 @@ import io.swagger.annotations.SwaggerDefinition;
 import io.swagger.jaxrs.Reader;
 import io.swagger.models.Swagger;
 import io.swagger.util.Json;
+import net.minidev.json.JSONArray;
+
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
@@ -45,7 +51,7 @@ import org.json.simple.JSONValue;
  * outsourced to (imported) classes.
  * 
  */
-@Path("")
+@Path("/todolist")
 @Version("0.1") // this annotation is used by the XML mapper
 @Api
 @SwaggerDefinition(
@@ -55,7 +61,7 @@ import org.json.simple.JSONValue;
         contact = @Contact(name = "arifin", email = "CAEAddress@gmail.com") ,
         license = @License(name = "BSD",
             url = "https://github.com/CAE-Dev/microservice-ToDoList-Microservice/blob/master/LICENSE.txt") ) )
-public class ToDoList-Microservice extends Service {
+public class Todolist extends Service {
 
 
   /*
@@ -69,7 +75,7 @@ public class ToDoList-Microservice extends Service {
   private DatabaseManager dbm;
 
 
-  public ToDoList-Microservice() {
+  public Todolist() {
     // read and set properties values
     setFieldValues();
     // instantiate a database manager to handle database connection pooling and credentials
@@ -98,14 +104,37 @@ public class ToDoList-Microservice extends Service {
   })
   @ApiOperation(value = "getData", notes = "")
   public HttpResponse getData() {
-    // responseGetData
-    boolean responseGetData_condition = true;
-    if(responseGetData_condition) {
-      JSONObject dataFetched = new JSONObject();
-      HttpResponse responseGetData = new HttpResponse(dataFetched.toJSONString(), HttpURLConnection.HTTP_OK);
-      return responseGetData;
+	  JSONObject dataJson = new JSONObject();
+	  Connection conn = null;
+    try {
+    	
+
+		 conn = dbm.getConnection();
+		PreparedStatement stmt = conn.prepareStatement("SELECT * FROM gamificationCAE.todolist ORDER BY id ASC");
+    	ResultSet rs = stmt.executeQuery();
+		while (rs.next()) {
+			dataJson.put(rs.getInt("id"), rs.getString("name"));
+			
+     	}
+		
+	    if(!dataJson.isEmpty()) {
+	    	return new HttpResponse(dataJson.toJSONString(), HttpURLConnection.HTTP_OK);
+	    }
+	    return new HttpResponse("No data Found", HttpURLConnection.HTTP_OK);
+	      
+	} catch (SQLException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+
+	    return new HttpResponse("Database connection error", HttpURLConnection.HTTP_INTERNAL_ERROR);
+	}
+    finally {
+      try {
+        conn.close();
+      } catch (SQLException e) {
+        e.printStackTrace();
+      }
     }
-    return null;
   }
 
 
@@ -118,22 +147,39 @@ public class ToDoList-Microservice extends Service {
    * 
    */
   @POST
-  @Path("/data")
+  @Path("/data/{name}")
   @Produces(MediaType.TEXT_PLAIN)
   @Consumes(MediaType.TEXT_PLAIN)
   @ApiResponses(value = {
        @ApiResponse(code = HttpURLConnection.HTTP_CREATED, message = "responseCreateData")
   })
   @ApiOperation(value = "createData", notes = "")
-  public HttpResponse createData() {
-    // responseCreateData
-    boolean responseCreateData_condition = true;
-    if(responseCreateData_condition) {
-      String dataCreated = "Some String";
-      HttpResponse responseCreateData = new HttpResponse(dataCreated, HttpURLConnection.HTTP_CREATED);
-      return responseCreateData;
-    }
-    return null;
+  public HttpResponse createData(@PathParam("name") String name) {
+	  Connection conn = null;
+	  try {
+	    	
+
+			conn = dbm.getConnection();
+			PreparedStatement stmt = conn.prepareStatement("INSERT INTO gamificationCAE.todolist (name) VALUES (?)");
+			stmt.setString(1, name);
+
+			stmt.executeUpdate();
+			
+		    return new HttpResponse(name + " is added!", HttpURLConnection.HTTP_OK);
+		      
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+
+		    return new HttpResponse("Database connection error", HttpURLConnection.HTTP_INTERNAL_ERROR);
+		}
+	    finally {
+	        try {
+	          conn.close();
+	        } catch (SQLException e) {
+	          e.printStackTrace();
+	        }
+	      }
   }
 
 
@@ -146,22 +192,39 @@ public class ToDoList-Microservice extends Service {
    * 
    */
   @DELETE
-  @Path("/data")
+  @Path("/data/{id}")
   @Produces(MediaType.TEXT_PLAIN)
   @Consumes(MediaType.TEXT_PLAIN)
   @ApiResponses(value = {
        @ApiResponse(code = HttpURLConnection.HTTP_OK, message = "responseDeleteData")
   })
   @ApiOperation(value = "deleteData", notes = "")
-  public HttpResponse deleteData() {
-    // responseDeleteData
-    boolean responseDeleteData_condition = true;
-    if(responseDeleteData_condition) {
-      String dataDeleted = "Some String";
-      HttpResponse responseDeleteData = new HttpResponse(dataDeleted, HttpURLConnection.HTTP_OK);
-      return responseDeleteData;
-    }
-    return null;
+  public HttpResponse deleteData(@PathParam("id") Integer id) {
+	  Connection conn = null;
+	  try {
+	    	
+
+			conn = dbm.getConnection();
+			PreparedStatement stmt = conn.prepareStatement("DELETE FROM gamificationCAE.todolist WHERE id = ?");
+			stmt.setInt(1, id);
+			stmt.executeUpdate();
+			stmt = conn.prepareStatement("ALTER TABLE todolist AUTO_INCREMENT = 1;");
+			stmt.executeUpdate();
+		    return new HttpResponse("data number " + id + " is deleted!", HttpURLConnection.HTTP_OK);
+		      
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+
+		    return new HttpResponse("Database connection error", HttpURLConnection.HTTP_INTERNAL_ERROR);
+		}
+	    finally {
+	        try {
+	          conn.close();
+	        } catch (SQLException e) {
+	          e.printStackTrace();
+	        }
+	      }
   }
 
 
